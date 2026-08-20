@@ -1,104 +1,164 @@
-# SupercarRental-AWS-React-Application
+# SupercarRental — Serverless AWS Booking Platform
 
-The Supercar Rental Full Stack Website uses React, Node.js, and AWS (S3, API Gateway, Lambda, DynamoDB, and SNS) to create a highly scalable, serverless booking platform for exotic track experiences. 
+A cloud-native supercar rental and track booking platform built entirely on AWS serverless infrastructure. Users browse a curated fleet of exotic vehicles and reserve driving time slots — with atomic double-booking prevention and instant email confirmation.
 
-This project is a cloud-native web application that allows users to browse high-performance vehicles and securely book driving time slots.
+> ⚠️ **Note:** The live deployment is no longer active. This project was hosted on an academic AWS Learner Lab account that has since expired. Screenshots and architecture diagram are available below.
 
-## Main Features
+> **Tech Stack:** `React` · `TypeScript` · `Node.js` · `AWS Lambda` · `API Gateway` · `DynamoDB` · `S3` · `SNS` · `IAM` · `KMS`
 
-* **Real-Time Fleet Browsing:** Users can view a curated list of supercars with details like Make, Model, Year, and high-quality images.
-* **Double-Booking Prevention:** Utilizes a composite primary key strategy in DynamoDB (Conditional Writes) to mathematically prevent two users from booking the same car at the exact same time.
-* **Instant Notifications:** Seamless integration with Amazon SNS triggers an immediate confirmation email to the user upon a successful booking.
-* **Serverless Architecture:** Designed for high availability and low latency. The backend logic scales automatically from zero to thousands of requests using AWS Lambda to handle burst holiday traffic.
-* **Secure AWS Integration:** All data is encrypted at rest (KMS) and in transit (HTTPS/TLS), with Lambda functions operating under strict Identity and Access Management (IAM) least-privilege roles.
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Screenshots](#screenshots)
+- [Project Structure](#project-structure)
+- [Deploying to AWS](#deploying-to-aws)
+- [User Roles](#user-roles)
+- [Project Background](#project-background)
+- [Acknowledgements](#acknowledgements)
+
+---
+
+## Features
+
+- **Real-Time Fleet Browsing:** Displays a curated list of supercars with Make, Model, Year, and high-quality images, fetched live from DynamoDB via Lambda.
+- **Atomic Double-Booking Prevention:** Uses a DynamoDB composite primary key (`carId` + `dateSlot`) with Conditional Writes — if two users attempt the same slot simultaneously, only one succeeds at the database level. No locks, no queues.
+- **Instant Email Confirmation:** Amazon SNS triggers a confirmation email to the user the moment a reservation is committed to the database.
+- **Auto-Scaling Serverless Backend:** AWS Lambda scales from zero to thousands of concurrent requests automatically — no servers to provision or idle capacity to pay for.
+- **Security by Default:** All data encrypted at rest (KMS) and in transit (HTTPS/TLS). Lambda functions operate under IAM least-privilege roles — each function has access only to the specific DynamoDB actions and SNS topics it needs.
+
+---
+
+## Architecture
+
+<img width="468" height="227" alt="AWS Architecture Diagram" src="https://github.com/user-attachments/assets/96679338-9c57-4fb9-b8ae-c128f5fafac6" />
+
+| Layer | Service | Role |
+|---|---|---|
+| Frontend | React + S3 | SPA hosted as a static site |
+| Networking | API Gateway | HTTP entry point with CORS + routing |
+| Compute | AWS Lambda (Node.js) | `GetCars` and `ReserveCar` functions |
+| Database | DynamoDB | NoSQL store with conditional writes |
+| Notifications | Amazon SNS | Async email delivery on booking |
+| Security | IAM + KMS | Least-privilege roles, encryption at rest |
+
+---
 
 ## Screenshots
 
-**Architecture Diagram**
+**Frontend — Fleet Browsing**
 
-<img width="468" height="227" alt="image" src="https://github.com/user-attachments/assets/96679338-9c57-4fb9-b8ae-c128f5fafac6" />
+<img width="1494" height="797" alt="Fleet browsing" src="https://github.com/user-attachments/assets/66271bac-f797-4c35-80a6-7ca69b370606" />
+<img width="1495" height="826" alt="Car detail" src="https://github.com/user-attachments/assets/24c1143c-51a3-4bfb-b540-793647c80b80" />
+<img width="1501" height="838" alt="Booking flow" src="https://github.com/user-attachments/assets/be7dfaa5-bfcd-4744-a37a-f83ae331cb28" />
+<img width="1501" height="831" alt="Confirmation" src="https://github.com/user-attachments/assets/40dc2180-4a4e-4449-b830-60c3ca4f7385" />
 
+**DynamoDB — Reservations Table**
 
-**Frontend User Interface**
+<img width="1511" height="747" alt="DynamoDB Cars table" src="https://github.com/user-attachments/assets/20ec299b-83f9-4afd-80c3-339a6cd53798" />
+<img width="1505" height="786" alt="DynamoDB Reservations table" src="https://github.com/user-attachments/assets/ef97a93f-4a4c-4467-9093-9dcbdecf95da" />
+<img width="1509" height="779" alt="DynamoDB record detail" src="https://github.com/user-attachments/assets/ef4bbe40-0967-4710-b574-6dd65cef078c" />
 
-<img width="1494" height="797" alt="Screenshot 2025-12-17 at 7 38 44 PM" src="https://github.com/user-attachments/assets/66271bac-f797-4c35-80a6-7ca69b370606" />
+---
 
-<img width="1495" height="826" alt="Screenshot 2025-12-17 at 7 40 12 PM" src="https://github.com/user-attachments/assets/24c1143c-51a3-4bfb-b540-793647c80b80" />
+## Project Structure
 
-<img width="1501" height="838" alt="Screenshot 2025-12-17 at 7 39 54 PM" src="https://github.com/user-attachments/assets/be7dfaa5-bfcd-4744-a37a-f83ae331cb28" />
+```
+SupercarRental/
+├── src/
+│   ├── components/       # React UI components (car cards, booking form, etc.)
+│   ├── App.tsx           # Root component and routing
+│   └── index.tsx         # Entry point
+├── public/               # Static assets
+├── build/                # Production build output (generated by npm run build)
+├── package.json
+└── tsconfig.json
+```
 
-<img width="1501" height="831" alt="Screenshot 2025-12-17 at 7 38 55 PM" src="https://github.com/user-attachments/assets/40dc2180-4a4e-4449-b830-60c3ca4f7385" />
+> Lambda function source code (`GetCars`, `ReserveCar`) was deployed directly via the AWS Console during development.
 
+---
 
+## Deploying to AWS
 
-**DynamoDB Database View**
+You will need an active AWS account. Follow these steps to deploy the full stack.
 
-<img width="1511" height="747" alt="Screenshot 2025-12-17 at 7 41 51 PM" src="https://github.com/user-attachments/assets/20ec299b-83f9-4afd-80c3-339a6cd53798" />
+**1. Build the Frontend**
 
-<img width="1505" height="786" alt="Screenshot 2025-12-17 at 7 42 24 PM" src="https://github.com/user-attachments/assets/ef97a93f-4a4c-4467-9093-9dcbdecf95da" />
+```bash
+npm install
+npm run build
+```
 
-<img width="1509" height="779" alt="Screenshot 2025-12-17 at 7 42 14 PM" src="https://github.com/user-attachments/assets/ef4bbe40-0967-4710-b574-6dd65cef078c" />
+**2. Host Frontend on S3**
 
-## Purpose of Assignments Over the Term
+- Create an S3 bucket and enable **Static Website Hosting**
+- Upload the contents of the `build/` folder
+- Set a bucket policy to allow public read access on `index.html` and assets
 
-Throughout the term, this project was built as the Final Term Project for CSCI3124 - Intro to Cloud Computing at Dalhousie University. The goal was to build a scalable, cloud-native platform that targets the holiday travel and leisure market, allowing customers to book high-demand driving experiences without the risk of system crashes.
+**3. Set Up DynamoDB Tables**
 
-By the end of the course, the site features:
-* A responsive React-based Single Page Application hosted entirely on the cloud.
-* Collections of supercars with their respective specifications.
-* The ability for users to securely reserve specific time slots.
-* An automated email notification system for booking confirmations.
-* A cost-efficient, 100% serverless backend architecture replacing traditional idle servers.
+| Table | Partition Key | Sort Key |
+|---|---|---|
+| `Cars` | `carId` (String) | — |
+| `Reservations` | `carId` (String) | `dateSlot` (String) |
 
-## Users of the Site
+**4. Create Lambda Functions**
 
-* **Holiday Travelers & Gift-Givers:** Can browse the platform for unique holiday activities and book experiences.
-* **Automotive Enthusiasts:** Can view supercar specifications and reserve track time.
-* **Platform Administrators:** Oversee fleet availability and system data.
+- Create two Node.js Lambda functions: `GetCars` and `ReserveCar`
+- Attach an IAM execution role with:
+  - `dynamodb:Scan` on the `Cars` table
+  - `dynamodb:PutItem` (with condition expression) on `Reservations`
+  - `sns:Publish` on your notification topic
 
-## Assignment Description
+**5. Create an SNS Topic**
 
-The project was built utilizing a completely serverless pipeline to compare cloud computing services versus traditional server-based (EC2/RDS) setups. The architecture was designed in stages:
+- Create a Standard SNS topic
+- Subscribe your email address and confirm the subscription
 
-* **Frontend:** Built using React and TypeScript. Compiled artifacts were uploaded to Amazon S3 for static website hosting, providing a cheap and highly durable user interface.
-* **Networking:** Amazon API Gateway was set up as a secure HTTP entry point for the frontend to communicate with the backend.
-* **Compute:** Node.js functions were written and hosted on AWS Lambda, allowing the code to execute and scale without provisioning servers.
-* **Database:** Data storage was handled by Amazon DynamoDB, chosen over relational databases for its single-digit millisecond latency and flexible NoSQL schema.
-* **Integration:** Amazon SNS was integrated to handle asynchronous email delivery to the end users upon successful reservation.
+**6. Configure API Gateway**
 
-## Installation Steps
+- Create a new HTTP API
+- Add routes:
+  - `GET /cars` → `GetCars` Lambda
+  - `POST /reserve` → `ReserveCar` Lambda
+- Enable CORS, allowing requests from your S3 bucket URL
 
-To run this project in your own AWS environment, you will need an active AWS account.
+**7. Connect Frontend to Backend**
 
-**1. Frontend Setup (S3):**
-* Run `npm run build` in the React frontend directory.
-* Create an Amazon S3 Bucket, enable "Static Website Hosting", and upload the build artifacts (`.html`, `.js`, `.css`).
-* Update the bucket policies to allow public read access.
+- Set your API Gateway invoke URL as an environment variable in the React app
+- Rebuild and re-upload the `build/` folder to S3
 
-**2. Database Setup (DynamoDB):**
-* Open the AWS DynamoDB Console.
-* Create a table named `Cars` with a Partition key of `carId`.
-* Create a table named `Reservations` with a Partition key of `carId` and a Sort key of `dateSlot`.
+---
 
-**3. Backend Setup (Lambda & SNS):**
-* Create an Amazon SNS Topic for email notifications and subscribe your email address.
-* Create two Node.js AWS Lambda functions (`GetCars` and `ReserveCar`) and upload your backend code.
-* Attach IAM policies to the Lambda execution role allowing DynamoDB Scan/PutItem actions and SNS Publish actions.
+## User Roles
 
-**4. API Routing (API Gateway):**
-* Create a new HTTP API in API Gateway.
-* Set up a `GET /cars` route pointing to the `GetCars` Lambda.
-* Set up a `POST /reserve` route pointing to the `ReserveCar` Lambda. 
-* Enable CORS for your S3 domain.
+| Role | Capabilities |
+|---|---|
+| Automotive Enthusiast | Browse fleet, view specs, reserve a time slot |
+| Holiday Traveler / Gift-Giver | Book experiences as gifts or leisure activities |
+| Platform Administrator | Manage fleet data and monitor DynamoDB reservations |
 
-**5. Configuration:**
-* Update the API Gateway URL in your React frontend environment variables and rebuild the project to connect the frontend to the backend.
+---
+
+## Project Background
+
+Built as the final term project for CSCI3124 — Intro to Cloud Computing at Dalhousie University. The core engineering goal was to compare a fully serverless architecture against a traditional EC2/RDS setup, targeting a high-demand, burst-traffic scenario (holiday travel bookings).
+
+Key design decisions:
+- **DynamoDB over RDS** — chosen for single-digit millisecond read latency and a schema flexible enough to add car attributes without migrations
+- **Conditional Writes for concurrency** — instead of application-level locks, the double-booking constraint is enforced atomically at the database layer using DynamoDB's `ConditionExpression`
+- **Lambda over EC2** — eliminated idle server costs entirely; the platform costs nothing when there are zero bookings and scales instantly under load
+- **SNS for notifications** — decoupled the email step from the reservation transaction so a slow email provider never blocks a booking from completing
+
+---
 
 ## Acknowledgements
 
-* AWS S3 for static website hosting.
-* AWS Lambda and API Gateway for serverless compute and networking.
-* Amazon DynamoDB for NoSQL database management.
-* Amazon SNS for application integration and messaging.
-* React and Node.js for frontend and backend development.
-* *Note: The live application and video presentation links are no longer active, as this project was originally deployed using an academic AWS Learner Lab account that expired at the end of the university term.*
+- [React](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/) — frontend SPA
+- [AWS Lambda](https://aws.amazon.com/lambda/) + [API Gateway](https://aws.amazon.com/api-gateway/) — serverless compute and routing
+- [Amazon DynamoDB](https://aws.amazon.com/dynamodb/) — NoSQL database
+- [Amazon S3](https://aws.amazon.com/s3/) — static site hosting
+- [Amazon SNS](https://aws.amazon.com/sns/) — email notification delivery
